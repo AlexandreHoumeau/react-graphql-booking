@@ -1,0 +1,7 @@
+{
+  "env": {
+    "MONGO_USER": "AlexandreHoumeau",
+    "MONGO_PASSWORD": "Nelson325658",
+    "MONDO_NAME_DB": "MegnoDB"
+  }
+}
