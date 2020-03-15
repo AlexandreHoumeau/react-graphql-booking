@@ -2,31 +2,50 @@ const bcrypt = require('bcryptjs')
 
 const Event = require('../../models/event')
 const User = require('../../models/user')
+const Booking = require('../../models/booking')
 
+const events = async eventIds => {
+  try {
+    const events = await Event.find({_id: {$in: eventIds}})
 
-const events = eventIds => {
-  return Event.find({_id: {$in: eventIds}})
-  .then(events => {
-    return events.map(event => {
-      return {...event._doc, creator: user.bind(this, event.creator)}
+    events.map(event => {
+      return {
+        ...event._doc,
+        _id: event.id,
+        date: new Date(event._doc.date).toISOString(),
+        creator: user.bind(this, event.creator)
+      }
     })
-  })
-  .catch(err => {
+    return events
+  } catch (err) {
     throw err
-  })
+  }
 }
-const user = userId => {
-  return User.findById(userId)
-  .then(user => {
+
+const singleEvent = async eventId => {
+  try {
+    const event = await Event.findById(eventId);
     return {
-      ...user._doc, 
-      _id: user.id, 
+      ...event._doc,
+      _id: event.id,
+      creator: user.bind(this, event.creator)
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
+const user = async userId => {
+  try {
+    const user = await User.findById(userId)
+    return {
+      ...user._doc,
+      _id: user.id,
       createdEvents: events.bind(this, user._doc.createdEvents)
     }
-  })
-  .catch(err => {
+  } catch (err) {
     throw err
-  })
+  }
 }
 
 module.exports = {
@@ -34,9 +53,9 @@ module.exports = {
     return Event.find()
       .then((events) => {
         return events.map((event) => {
-          console.log(event)
           return {
             ...event._doc,
+            date: new Date(event._doc.date).toISOString(),
             creator: user.bind(this, event._doc.creator)
           }
         })
@@ -45,7 +64,23 @@ module.exports = {
         throw err
     })
   },
-
+  bookings: async () => {
+    try {
+      const bookings = await Booking.find();
+      return bookings.map(booking => {
+        return {
+          ...booking._doc,
+          _id: booking.id,
+          user: user.bind(this, booking._doc.user),
+          event: singleEvent.bind(this, booking._doc.event),
+          createdAt: new Date(booking._doc.createdAt).toISOString(),
+          updatedAt: new Date(booking._doc.updatedAt).toISOString()
+        };
+      });
+    } catch (err) {
+      throw err;
+    }
+  },
   createEvent: (args) => {
     const event = new Event({
       title: args.eventInput.title,
@@ -58,7 +93,10 @@ module.exports = {
     return event
     .save()
     .then((res) => {
-      createdEvents = {...res._doc, creator: user.bind(this, res._doc.creator)}
+      createdEvents = {
+        ...res._doc,
+        date: new Date(event._doc.date).toISOString(), 
+        creator: user.bind(this, res._doc.creator)}
       return User.findById('5e6c0b17530bb7bba9766fed')
     })
     .then((user) => {
@@ -94,5 +132,36 @@ module.exports = {
       .catch((err) => {
         throw err
       })
+  },
+
+  bookEvent: async args => {
+    const fetchedEvent = await Event.findOne({ _id: args.eventId });
+    const booking = new Booking({
+      user: '5e6c0b17530bb7bba9766fed',
+      event: fetchedEvent
+    })
+    const result = await booking.save();
+    return {
+      ...result._doc,
+      user: user.bind(this, booking._doc.user),
+      event: singleEvent.bind(this, booking._doc.event),
+      createdAt: new Date(result._doc.createdAt).toISOString(),
+      updatedAt: new Date(result._doc.updatedAt).toISOString()
+    }
+  },
+
+  cancelBooking: async args => {
+    try {
+      const booking = await Booking.findById(args.bookingId).populate('event');
+      const event = {
+        ...booking.event._doc,
+        creator: user.bind(this, booking.event._doc.creator)
+      };
+      await Booking.deleteOne({ _id: args.bookingId });
+      return event;
+    } catch (err) {
+      throw err;
+    }
   }
 }
+
