@@ -1,21 +1,24 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const graphqlHttp = require('express-graphql')
-const app = express()
-const mongoose = require('mongoose')
 
-const graphqlSchema = require('./graphql/schema/index')
-const graphqlResolvers = require('./graphql/resolvers/index')
-mongoose.set('useCreateIndex', true)
+const express = require('express');
+const bodyParser = require('body-parser');
+const graphqlHttp = require('express-graphql');
+const mongoose = require('mongoose');
 
+const graphQlSchema = require('./graphql/schema/index');
+const graphQlResolvers = require('./graphql/resolvers/index');
 
-app.use('/graphql', graphqlHttp({
-  schema: graphqlSchema,
-  rootValue: graphqlResolvers,
-  graphiql: true
-}))
+const app = express();
 
-app.use(bodyParser.json())
+app.use(bodyParser.json());
+
+app.use(
+  '/graphql',
+  graphqlHttp({
+    schema: graphQlSchema,
+    rootValue: graphQlResolvers,
+    graphiql: true
+  })
+)
 
 mongoose.
   connect(
